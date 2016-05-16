@@ -4,19 +4,11 @@ legHeight=2;
 shrinkDelta=0;
 
 module servoArm(h) {
-    /*
-    linear_extrude(height = legHeight) {
-    hull() {
-    circle(d=3+shrinkDelta); 
-    translate([16,0,0]) circle(d=7+shrinkDelta);
-    }
-    }
-    */
     linear_extrude(height = h) {
-    circle(d=7.5+0.5);
+    circle(d=7.5+0.3);
     hull() {
     circle(d=6);
-    translate([15,0,0]) circle(d=4+0.5);
+    translate([15,0,0]) circle(d=4+0.3);
     }
     }
 }
