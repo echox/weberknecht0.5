@@ -5,10 +5,10 @@ shrinkDelta=0;
 
 module servoArm(h) {
     linear_extrude(height = h) {
-    circle(d=7.5+0.3);
+    circle(d=7.5+0.3,$fn=180);
     hull() {
     circle(d=6);
-    translate([15,0,0]) circle(d=4+0.3);
+    translate([15,0,0]) circle(d=4+0.3,$fn=180);
     }
     }
 }

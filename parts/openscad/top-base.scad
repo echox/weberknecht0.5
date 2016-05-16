@@ -59,11 +59,12 @@ module servo() {
 
 
 
-module servoArm() {
-    linear_extrude(height = 4, center = true) {
+module servoArm(h) {
+    linear_extrude(height = h) {
+    circle(d=7.5+0.3,$fn=180);
     hull() {
-    circle(d=8, $fn=180); 
-    translate([16,0,0]) circle(d=4, $fn=180);
+    circle(d=6);
+    translate([15,0,0]) circle(d=4+0.3,$fn=180);
     }
     }
 }
@@ -96,7 +97,7 @@ difference() {
     translate([18,0,-2]) cube([6,33,7]);
 
     // nible
-   translate ([9,14,-2]) rotate([0,0,90]) servoArm();    
+   translate ([9,14,-2]) rotate([0,0,90]) servoArm(2);    
     
     // cable hole
     translate([4,0,3]) cube([5,5,9]);
