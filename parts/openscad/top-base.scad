@@ -61,10 +61,10 @@ module servo() {
 
 module servoArm(h) {
     linear_extrude(height = h) {
-    circle(d=7.5+0.3,$fn=180);
+    circle(d=7.5+0.6,$fn=180);
     hull() {
     circle(d=6);
-    translate([15,0,0]) circle(d=4+0.3,$fn=180);
+    translate([15,0,0]) circle(d=4+0.6,$fn=180);
     }
     }
 }
@@ -108,6 +108,13 @@ difference() {
     
     // rotation socket
     translate ([0,11,8]) rotate([0,90,0]) cylinder(h=40,d=8,$fn=180);
+    
+    //cut bottom
+    translate([-28,0,-5]) cube([30,40,30]);
+    
+    // servo screw
+    translate([9,14,-5]) cylinder(d=2,h=20,$fn=180);    
+    # translate([9,14,1]) cylinder(d=4,h=20,$fn=180);
 }
 }
 
