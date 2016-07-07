@@ -1,21 +1,21 @@
 /*********************************************************************
- This is an example for our nRF51822 based Bluefruit LE modules
+  This is an example for our nRF51822 based Bluefruit LE modules
 
- Pick one up today in the adafruit shop!
+  Pick one up today in the adafruit shop!
 
- Adafruit invests time and resources providing this open source code,
- please support Adafruit and open-source hardware by purchasing
- products from Adafruit!
+  Adafruit invests time and resources providing this open source code,
+  please support Adafruit and open-source hardware by purchasing
+  products from Adafruit!
 
- MIT license, check LICENSE for more information
- All text above, and the splash screen below must be included in
- any redistribution
+  MIT license, check LICENSE for more information
+  All text above, and the splash screen below must be included in
+  any redistribution
 *********************************************************************/
 
 #include <Arduino.h>
 #include <SPI.h>
 #if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
-  #include <SoftwareSerial.h>
+#include <SoftwareSerial.h>
 #endif
 
 #include "Adafruit_BLE.h"
@@ -35,49 +35,91 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define SERVOMIN  150 // this is the 'minimum' pulse length count (out of 4096)
 #define SERVOMAX  600 // this is the 'maximum' pulse length count (out of 4096)
 
+#define SERVO_LEG_REST  375
+
 #define SERVOMID 360
+#define SERVO_LEG_REST  375 // center position
+
+#define HEAD_SERVO_INDEX 0
+
+#define LEG_FRONT_LEFT_YAW 1
+#define LEG_FRONT_LEFT_PITCH 2
+
+#define LEG_FRONT_RIGHT_YAW 3
+#define LEG_FRONT_RIGHT_PITCH 4
+
+#define LEG_BACK_RIGHT_YAW 5
+#define LEG_BACK_RIGHT_PITCH 6
+
+#define LEG_BACK_LEFT_YAW 7
+#define LEG_BACK_LEFT_PITCH 8
+
+#define BUTTON_FRONT_PIN 4
+#define BUTTON_REAR_PIN 5
+
+#define BUTTON_FRONT_INDEX 0
+#define BUTTON_REAR_INDEX 1
+
 
 // our servo # counter
 uint8_t servonum = 0;
 
 //----
- 
+
 
 
 // servo array
 int servos[] = {
   SERVOMID,
-  SERVOMID,
-  SERVOMID,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
 
-  SERVOMID,
-  SERVOMID,
-  SERVOMID,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
 
-  SERVOMID,
-  SERVOMID,
-  SERVOMID,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
 
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST
+};
+
+int _last_sent_value_servos[] = {
   SERVOMID,
-  SERVOMID,
-  SERVOMID
-  
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+
+  SERVO_LEG_REST,
+  SERVO_LEG_REST,
+  SERVO_LEG_REST
 };
 
 
 
-
-
-
+// Button debouncing
+int buttons[] = {
+  LOW,
+  LOW
+};
 
 
 // --- abstandsmesser
-
 #include <NewPing.h>
 #define  TRIGGER_PIN  6
 #define  ECHO_PIN     7
 #define MAX_DISTANCE 500 // Maximum distance we want to ping for (in centimeters).
-                         //Maximum sensor distance is rated at 400-500cm.
+//Maximum sensor distance is rated at 400-500cm.
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // Setup für NewPing (Pins und maximale Distanz).
 
 int DistanceIn;
@@ -88,24 +130,24 @@ int DistanceCm;
 /*=========================================================================
     APPLICATION SETTINGS
 
-    FACTORYRESET_ENABLE       Perform a factory reset when running this sketch
-   
-                              Enabling this will put your Bluefruit LE module
+      FACTORYRESET_ENABLE       Perform a factory reset when running this sketch
+     
+                                Enabling this will put your Bluefruit LE module
                               in a 'known good' state and clear any config
                               data set in previous sketches or projects, so
-                              running this at least once is a good idea.
-   
-                              When deploying your project, however, you will
+                                running this at least once is a good idea.
+     
+                                When deploying your project, however, you will
                               want to disable factory reset by setting this
                               value to 0.  If you are making changes to your
-                              Bluefruit LE device via AT commands, and those
+                                Bluefruit LE device via AT commands, and those
                               changes aren't persisting across resets, this
                               is the reason why.  Factory reset will erase
                               the non-volatile memory where config data is
                               stored, setting it back to factory default
                               values.
-       
-                              Some sketches that require you to bond to a
+         
+                                Some sketches that require you to bond to a
                               central device (HID mouse, keyboard, etc.)
                               won't work at all with this feature enabled
                               since the factory reset will clear all of the
@@ -116,9 +158,9 @@ int DistanceCm;
                               "DISABLE" or "MODE" or "BLEUART" or
                               "HWUART"  or "SPI"  or "MANUAL"
     -----------------------------------------------------------------------*/
-    #define FACTORYRESET_ENABLE         0
-    #define MINIMUM_FIRMWARE_VERSION    "0.6.6"
-    #define MODE_LED_BEHAVIOUR          "MODE"
+#define FACTORYRESET_ENABLE         0
+#define MINIMUM_FIRMWARE_VERSION    "0.6.6"
+#define MODE_LED_BEHAVIOUR          "MODE"
 /*=========================================================================*/
 
 // Create the bluefruit object, either software serial...uncomment these lines
@@ -126,7 +168,7 @@ int DistanceCm;
 SoftwareSerial bluefruitSS = SoftwareSerial(BLUEFRUIT_SWUART_TXD_PIN, BLUEFRUIT_SWUART_RXD_PIN);
 
 Adafruit_BluefruitLE_UART ble(bluefruitSS, BLUEFRUIT_UART_MODE_PIN,
-                      BLUEFRUIT_UART_CTS_PIN, BLUEFRUIT_UART_RTS_PIN);
+                              BLUEFRUIT_UART_CTS_PIN, BLUEFRUIT_UART_RTS_PIN);
 
 
 /* ...or hardware serial, which does not need the RTS/CTS pins. Uncomment this line */
@@ -160,16 +202,19 @@ void setup(void)
 
   pinMode(1, OUTPUT);
 
-//---- servo
+  pinMode(BUTTON_FRONT_PIN, INPUT);
+  pinMode(BUTTON_REAR_PIN, INPUT);
+
+  //---- servo
   pwm.begin();
-  
+
   pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
 
   yield();
 
   //-----
 
-  while (!Serial);  // required for Flora & Micro
+  //while (!Serial);  // required for Flora & Micro
   delay(500);
 
   Serial.begin(115200);
@@ -189,7 +234,7 @@ void setup(void)
   {
     /* Perform a factory reset to make sure everything is in a known state */
     Serial.println(F("Performing a factory reset: "));
-    if ( ! ble.factoryReset() ){
+    if ( ! ble.factoryReset() ) {
       error(F("Couldn't factory reset"));
     }
   }
@@ -209,7 +254,7 @@ void setup(void)
 
   /* Wait for connection */
   while (! ble.isConnected()) {
-      delay(500);
+    delay(500);
   }
 
   Serial.println(F("******************************"));
@@ -234,12 +279,12 @@ void setup(void)
 
 void setServoPulse(uint8_t n, double pulse) {
   double pulselength;
-  
+
   pulselength = 1000000;   // 1,000,000 us per second
   pulselength /= 60;   // 60 Hz
-  Serial.print(pulselength); Serial.println(" us per period"); 
+  Serial.print(pulselength); Serial.println(" us per period");
   pulselength /= 4096;  // 12 bits of resolution
-  Serial.print(pulselength); Serial.println(" us per bit"); 
+  Serial.print(pulselength); Serial.println(" us per bit");
   pulse *= 1000;
   pulse /= pulselength;
   Serial.println(pulse);
@@ -249,12 +294,21 @@ void setServoPulse(uint8_t n, double pulse) {
 //----
 
 
+void resetLegs(void) {
+  servos[LEG_FRONT_RIGHT_PITCH] = SERVO_LEG_REST;
+  servos[LEG_FRONT_RIGHT_YAW] = SERVO_LEG_REST;
+  servos[LEG_FRONT_LEFT_PITCH] = SERVO_LEG_REST;
+  servos[LEG_FRONT_LEFT_YAW] = SERVO_LEG_REST;
+  servos[LEG_BACK_RIGHT_PITCH] = SERVO_LEG_REST;
+  servos[LEG_BACK_RIGHT_YAW] = SERVO_LEG_REST;
+  servos[LEG_BACK_LEFT_PITCH] = SERVO_LEG_REST;
+  servos[LEG_BACK_LEFT_YAW] = SERVO_LEG_REST;
+}
 
 void setServos(void) {
-
   int i;
   for (i = 0; i < 12; i++) {
-        pwm.setPWM(i, 0, servos[i]);
+    pwm.setPWM(i, 0, servos[i]);
   }
 }
 
@@ -275,7 +329,7 @@ String getState(void) {
   state += ";";
 
   state += "b:";
-  int brightness = analogRead(0); 
+  int brightness = analogRead(0);
   state += brightness;
   state += ";";
 
@@ -288,6 +342,32 @@ String getState(void) {
 
 
 
+String sweep(int count) {
+
+  String result = "?";
+  result += count;
+  result += ";";
+
+  int fullRange = SERVOMAX - SERVOMIN;
+  int stepSize = fullRange / (count - 1);
+  for (int i = 0; i < count; ++i) {
+    int rangeForStep = SERVOMIN + i * stepSize ;
+    if (i == count - 1) {
+      rangeForStep = SERVOMAX;
+    }
+
+    // move head
+    pwm.setPWM(HEAD_SERVO_INDEX, 0, rangeForStep);
+    delay(100);
+    // read distance
+    //unsigned long valueForStep = sonar.ping_cm();
+    result += sonar.ping_cm();
+    result += ";";
+  }
+
+  return result;
+}
+
 int stepper = 0;
 
 /**************************************************************************/
@@ -298,73 +378,83 @@ int stepper = 0;
 void loop(void)
 {
 
-// ---- ultraschall
-/*
-DistanceCm = sonar.ping_cm();
-ble.print("Distance: ");
-ble.print(DistanceCm);
-ble.println(" cm"); 
+  // ---- ultraschall
+  /*
+    DistanceCm = sonar.ping_cm();
+    ble.print("Distance: ");
+    ble.print(DistanceCm);
+    ble.println(" cm");
 
-int light = analogRead(0); 
-ble.print("Light: ");
-ble.println(light);
+    int light = analogRead(0);
+    ble.print("Light: ");
+    ble.println(light);
 
-*/
-//---
+  */
+  //---
+
+
+  //--- servo
+
+  /*
+    for(int s=0;s<8;s++) {
+
+    // Drive each servo one at a time
+    Serial.print("Servo: ");
+    Serial.println(servonum);
+    for (uint16_t pulselen = SERVOMIN; pulselen < SERVOMAX; pulselen++) {
+      pwm.setPWM(servonum, 0, pulselen);
+    }
+
+    delay(500);
+    for (uint16_t pulselen = SERVOMAX; pulselen > SERVOMIN; pulselen--) {
+      pwm.setPWM(servonum, 0, pulselen);
+    }
+
+    delay(100);
+
+    servonum ++;
+    if (servonum > 7) servonum = 0;
+    }
+  */
+
+  stepper++;
   
+  // Check Buttons
+    
+  buttons[BUTTON_FRONT_INDEX] = digitalRead(BUTTON_FRONT_PIN);
+  buttons[BUTTON_REAR_INDEX] = digitalRead(BUTTON_REAR_PIN);
 
-//--- servo
-
-/*
-for(int s=0;s<8;s++) {
-
-  // Drive each servo one at a time
-  Serial.print("Servo: ");
-  Serial.println(servonum);
-  for (uint16_t pulselen = SERVOMIN; pulselen < SERVOMAX; pulselen++) {
-    pwm.setPWM(servonum, 0, pulselen);
+ 
+  if (stepper >= 100) {
+    setServos();
   }
-
-  delay(500);
-  for (uint16_t pulselen = SERVOMAX; pulselen > SERVOMIN; pulselen--) {
-    pwm.setPWM(servonum, 0, pulselen);
+  
+  if (stepper >= 300) {
+    ble.println(getState());
+    stepper = 0;
+    if (buttons[BUTTON_FRONT_INDEX] == HIGH) {
+      resetLegs();
+      ble.println("leg reset.");
+    }
   }
+  // -- servo
 
-  delay(100);
-
-  servonum ++;
-  if (servonum > 7) servonum = 0;
-}
-*/
-
-stepper++;
-
-setServos();
-
-if(stepper>=100) {
-ble.println(getState());
-
-stepper=0;
-}
-// -- servo
-
-
-  // Check for user input 
-  char n, inputs[BUFSIZE+1];
+  // Check for user input
+  char n, inputs[BUFSIZE + 1];
 
   if (Serial.available()) {
     n = Serial.readBytes(inputs, BUFSIZE);
     inputs[n] = 0;
     // Send characters to Bluefruit
- //   Serial.print("Sending: ");
- //   Serial.println(inputs);
+    //   Serial.print("Sending: ");
+    //   Serial.println(inputs);
 
     // Send input data to host via Bluefruit
     ble.print(inputs);
   }
 
 
-String cmd;
+  String cmd;
   // Echo received data
   while ( ble.available() )
   {
@@ -381,27 +471,40 @@ String cmd;
 
     cmd += ((char) c);
   }
-  
-  if(cmd.charAt(0) == 's') {
 
-     int idx = cmd.substring(1,cmd.indexOf('=')).toInt();
-     int val = cmd.substring(cmd.indexOf('=')+1,cmd.indexOf('\n')).toInt();
-
-     servos[idx] = val;
+  if (cmd.charAt(0) == 'r') {
+    resetLegs();
+    ble.println("leg reset");
+  }
+  else if (cmd.charAt(0) == 's') {
+    int idx = cmd.substring(1, cmd.indexOf('=')).toInt();
+    int val = cmd.substring(cmd.indexOf('=') + 1, cmd.indexOf('\n')).toInt();
+    servos[idx] = val;
   } else if (cmd.charAt(0) == 'b') {
 
     ble.println("Beeping");
-    tone(1,1500,250);
+    tone(1, 1500, 250);
     delay(100);
-    tone(1,240,250);
+    tone(1, 240, 250);
     delay(10);
-    tone(1,440,250);
+    tone(1, 440, 250);
     delay(10);
-    tone(1,540,250);
-    
-  } else if (cmd.charAt(0) == 'l') {
+    tone(1, 540, 250);
 
-   digitalWrite(13, !digitalRead(13));
+  } else if (cmd.charAt(0) == '?') {
+    int steps = cmd.substring(1, cmd.indexOf('\n')).toInt();
+    if (steps < 2) {
+      steps = 0;
+    }
+    else if (steps > 400) {
+      steps = 400;
+    }
+    String sweepResult = sweep(steps);
+    ble.println(sweepResult);
   }
-  
+  else if (cmd.charAt(0) == 'l') {
+
+    digitalWrite(13, !digitalRead(13));
+  }
+
 }
