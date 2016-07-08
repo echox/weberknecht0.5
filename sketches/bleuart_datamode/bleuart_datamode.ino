@@ -240,8 +240,8 @@ void moveLeg(int leg, int yaw, int pitch ) {
   int range = SERVOMAX - SERVOMIN;
   
   float stepValue = range/180;
-  int yawInDegrees;
-  int pitchInDegrees;
+  int convertedYaw;
+  int convertedPitch;
   int yawingServo; 
   int pitchingServo;
 
@@ -252,30 +252,30 @@ void moveLeg(int leg, int yaw, int pitch ) {
       case 1:
         yawingServo = LEG_FRONT_LEFT_YAW;
         pitchingServo = LEG_FRONT_LEFT_PITCH;
-        yawInDegrees = yaw * stepValue;
-        pitchInDegrees = pitch * stepValue;
+        convertedYaw = (yaw * stepValue) + SERVOMIN ;
+        convertedPitch = (pitch * stepValue) + SERVOMIN;
         break;
       case 2:
         yawingServo = LEG_FRONT_RIGHT_YAW;
         pitchingServo = LEG_FRONT_RIGHT_PITCH;
-        yawInDegrees = yaw * stepValue;
-        pitchInDegrees = pitch * stepValue;
+        convertedYaw = (yaw * stepValue) + SERVOMIN ;
+        convertedPitch = (pitch * stepValue) + SERVOMIN;
         break;
      case 3:
         yawingServo = LEG_BACK_RIGHT_YAW;
         pitchingServo = LEG_BACK_RIGHT_PITCH;
-        yawInDegrees = yaw * stepValue;
-        pitchInDegrees = pitch * stepValue;
+        convertedYaw = (yaw * stepValue) + SERVOMIN ;
+        convertedPitch = (pitch * stepValue) + SERVOMIN;
         break;
       case 4:
         yawingServo = LEG_BACK_LEFT_YAW;
         pitchingServo = LEG_BACK_LEFT_PITCH;
-        yawInDegrees = yaw * stepValue;
-        pitchInDegrees = pitch * stepValue;
+        convertedYaw = (yaw * stepValue) + SERVOMIN ;
+        convertedPitch = (pitch * stepValue) + SERVOMIN;
         break;
     }
-    pwm.setPWM(yawingServo, 0, yawInDegrees);
-    pwm.setPWM(pitchingServo, 0, pitchInDegrees);
+    pwm.setPWM(yawingServo, 0, convertedYaw);
+    pwm.setPWM(pitchingServo, 0, convertedPitch);
   }
   
 
