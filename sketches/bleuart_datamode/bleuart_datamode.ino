@@ -40,7 +40,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define SERVO_LEG_REST  375
 
 #define SERVOMID 360
-#define SERVO_LEG_REST  375 // center position
+#define SERVO_LEG_MID  375 // center position
 
 #define HEAD_SERVO_INDEX 0
 
@@ -75,16 +75,16 @@ uint8_t servonum = 0;
 // servo array
 int servos[] = {
   SERVOMID,
-  SERVO_LEG_REST,
-  SERVO_LEG_REST,
+  SERVO_LEG_MID,
+  SERVO_LEG_MID,
 
-  SERVO_LEG_REST,
-  SERVO_LEG_REST,
-  SERVO_LEG_REST,
+  SERVO_LEG_MID,
+  SERVO_LEG_MID,
+  SERVO_LEG_MID,
 
-  SERVO_LEG_REST,
-  SERVO_LEG_REST,
-  SERVO_LEG_REST
+  SERVO_LEG_MID,
+  SERVO_LEG_MID,
+  SERVO_LEG_MID
 };
 
 // Button debouncing
@@ -175,6 +175,178 @@ void error(const __FlashStringHelper*err) {
             automatically on startup)
 */
 /**************************************************************************/
+
+//---- servo
+
+void setServoPulse(uint8_t n, double pulse) {
+  double pulselength;
+
+  pulselength = 1000000;   // 1,000,000 us per second
+  pulselength /= 60;   // 60 Hz
+  Serial.print(pulselength); Serial.println(" us per period");
+  pulselength /= 4096;  // 12 bits of resolution
+  Serial.print(pulselength); Serial.println(" us per bit");
+  pulse *= 1000;
+  pulse /= pulselength;
+  Serial.println(pulse);
+  pwm.setPWM(n, 0, pulse);
+}
+
+//----
+
+
+void resetLegs(void) {
+  servos[LEG_FRONT_LEFT_PITCH] = SERVO_LEG_MID;
+  servos[LEG_FRONT_LEFT_YAW] = SERVO_LEG_MID;
+  servos[LEG_FRONT_RIGHT_PITCH] = SERVO_LEG_MID;
+  servos[LEG_FRONT_RIGHT_YAW] = SERVO_LEG_MID;
+  servos[LEG_BACK_RIGHT_PITCH] = SERVO_LEG_MID;
+  servos[LEG_BACK_RIGHT_YAW] = SERVO_LEG_MID;
+  servos[LEG_BACK_LEFT_PITCH] = SERVO_LEG_MID;
+  servos[LEG_BACK_LEFT_YAW] = SERVO_LEG_MID;
+  setServos();
+}
+
+
+void sleepPosition(void) {
+  servos[HEAD_SERVO_INDEX] = SERVOMID;
+  servos[LEG_FRONT_LEFT_PITCH] = SERVOMIN;
+  servos[LEG_FRONT_LEFT_YAW] = SERVOMIN;
+  servos[LEG_FRONT_RIGHT_PITCH] = SERVOMAX;
+  servos[LEG_FRONT_RIGHT_YAW] = SERVOMAX;
+
+  servos[LEG_BACK_RIGHT_PITCH] = SERVOMIN;
+  servos[LEG_BACK_RIGHT_YAW] = SERVOMIN;
+  servos[LEG_BACK_LEFT_PITCH] = SERVOMAX;
+  servos[LEG_BACK_LEFT_YAW] = SERVOMAX;
+  setServos();  
+}
+
+void setServos(void) {
+  int i;
+  for (i = 0; i < 9; i++) {
+    pwm.setPWM(i, 0, servos[i]);
+    delay(50);
+  }
+}
+
+void setServo(int idx, int value) {
+    servos[idx] = value;
+    pwm.setPWM(idx, 0, value);
+    delay(50); 
+}
+
+void moveLeg(int leg, int yaw, int pitch ) {
+  int range = SERVOMAX - SERVOMIN;
+  
+  float stepValue = range/180;
+  int yawInDegrees;
+  int pitchInDegrees;
+  int yawingServo; 
+  int pitchingServo;
+
+  if ( (leg > 0) && (leg < 5)) {
+
+    switch(leg) 
+    {
+      case 1:
+        yawingServo = LEG_FRONT_LEFT_YAW;
+        pitchingServo = LEG_FRONT_LEFT_PITCH;
+        yawInDegrees = yaw * stepValue;
+        pitchInDegrees = pitch * stepValue;
+        break;
+      case 2:
+        yawingServo = LEG_FRONT_RIGHT_YAW;
+        pitchingServo = LEG_FRONT_RIGHT_PITCH;
+        yawInDegrees = yaw * stepValue;
+        pitchInDegrees = pitch * stepValue;
+        break;
+     case 3:
+        yawingServo = LEG_BACK_RIGHT_YAW;
+        pitchingServo = LEG_BACK_RIGHT_PITCH;
+        yawInDegrees = yaw * stepValue;
+        pitchInDegrees = pitch * stepValue;
+        break;
+      case 4:
+        yawingServo = LEG_BACK_LEFT_YAW;
+        pitchingServo = LEG_BACK_LEFT_PITCH;
+        yawInDegrees = yaw * stepValue;
+        pitchInDegrees = pitch * stepValue;
+        break;
+    }
+    pwm.setPWM(yawingServo, 0, yawInDegrees);
+    pwm.setPWM(pitchingServo, 0, pitchInDegrees);
+  }
+  
+
+
+}
+
+String getState(void) {
+  String state = "";
+
+  int i;
+  for (i = 0; i < 9; i++) {
+    state += "s";
+    state += i;
+    state += ":";
+    state += servos[i];
+    state += ";";
+  }
+
+  state += "d:";
+  state += sonar.ping_cm();
+  state += ";";
+
+  state += "b:";
+  int brightness = analogRead(0);
+  state += brightness;
+  state += ";";
+
+  state += "l:";
+  state += digitalRead(13);
+  state += ";";
+
+  return state;
+}
+
+
+
+String sweep(int count) {
+
+  if (count < 2) {
+    count = 0;
+  }
+  else if (count > 400) {
+    count = 400;
+  }
+  String result = "?";
+  result += count;
+  result += ";";
+
+  int fullRange = SERVOMAX - SERVOMIN;
+  int stepSize = fullRange / (count - 1);
+  for (int i = 0; i < count; ++i) {
+    int rangeForStep = SERVOMIN + i * stepSize ;
+    if (i == count - 1) {
+      rangeForStep = SERVOMAX;
+    }
+
+    // move head
+    pwm.setPWM(HEAD_SERVO_INDEX, 0, rangeForStep);
+    delay(100);
+    // read distance
+    result += sonar.ping_cm();
+    result += ";";
+  }
+  result += "\n";
+  pwm.setPWM(HEAD_SERVO_INDEX, 0, SERVOMID);
+  return result;
+}
+
+int stepper = 0;
+
+
 void setup(void)
 {
 
@@ -252,126 +424,8 @@ void setup(void)
   ble.setMode(BLUEFRUIT_MODE_DATA);
 
   Serial.println(F("******************************"));
-  startPosition();
+  resetLegs();
 }
-
-
-//---- servo
-
-void setServoPulse(uint8_t n, double pulse) {
-  double pulselength;
-
-  pulselength = 1000000;   // 1,000,000 us per second
-  pulselength /= 60;   // 60 Hz
-  Serial.print(pulselength); Serial.println(" us per period");
-  pulselength /= 4096;  // 12 bits of resolution
-  Serial.print(pulselength); Serial.println(" us per bit");
-  pulse *= 1000;
-  pulse /= pulselength;
-  Serial.println(pulse);
-  pwm.setPWM(n, 0, pulse);
-}
-
-//----
-
-
-void resetLegs(void) {
-  servos[LEG_FRONT_RIGHT_PITCH] = SERVO_LEG_REST;
-  servos[LEG_FRONT_RIGHT_YAW] = SERVO_LEG_REST;
-  servos[LEG_FRONT_LEFT_PITCH] = SERVO_LEG_REST;
-  servos[LEG_FRONT_LEFT_YAW] = SERVO_LEG_REST;
-  servos[LEG_BACK_RIGHT_PITCH] = SERVO_LEG_REST;
-  servos[LEG_BACK_RIGHT_YAW] = SERVO_LEG_REST;
-  servos[LEG_BACK_LEFT_PITCH] = SERVO_LEG_REST;
-  servos[LEG_BACK_LEFT_YAW] = SERVO_LEG_REST;
-  setServos();
-}
-
-
-void startPosition(void) {
-  servos[LEG_FRONT_RIGHT_PITCH] = 375;
-  servos[LEG_FRONT_RIGHT_YAW] = 600;
-  servos[LEG_FRONT_LEFT_PITCH] = 375;
-  servos[LEG_FRONT_LEFT_YAW] = 150;
-  servos[LEG_BACK_RIGHT_PITCH] = 375;
-  servos[LEG_BACK_RIGHT_YAW] = 150;
-  servos[LEG_BACK_LEFT_PITCH] = 375;
-  servos[LEG_BACK_LEFT_YAW] = 600;
-  setServos();
-}
-
-void setServos(void) {
-  int i;
-  for (i = 0; i < 9; i++) {
-    pwm.setPWM(i, 0, servos[i]);
-    delay(300);
-  }
-}
-
-String getState(void) {
-  String state = "";
-
-  int i;
-  for (i = 0; i < 9; i++) {
-    state += "s";
-    state += i;
-    state += ":";
-    state += servos[i];
-    state += ";";
-  }
-
-  state += "d:";
-  state += sonar.ping_cm();
-  state += ";";
-
-  state += "b:";
-  int brightness = analogRead(0);
-  state += brightness;
-  state += ";";
-
-  state += "l:";
-  state += digitalRead(13);
-  state += ";";
-
-  return state;
-}
-
-
-
-String sweep(int count) {
-
-  if (count < 2) {
-    count = 0;
-  }
-  else if (count > 400) {
-    count = 400;
-  }
-  String result = "?";
-  result += count;
-  result += ";";
-
-  int fullRange = SERVOMAX - SERVOMIN;
-  int stepSize = fullRange / (count - 1);
-  for (int i = 0; i < count; ++i) {
-    int rangeForStep = SERVOMIN + i * stepSize ;
-    if (i == count - 1) {
-      rangeForStep = SERVOMAX;
-    }
-
-    // move head
-    pwm.setPWM(HEAD_SERVO_INDEX, 0, rangeForStep);
-    delay(100);
-    // read distance
-    result += sonar.ping_cm();
-    result += ";";
-  }
-  
-  pwm.setPWM(HEAD_SERVO_INDEX, 0, SERVOMID);
-  return result;
-}
-
-int stepper = 0;
-
 /**************************************************************************/
 /*!
     @brief  Constantly poll for new command or response data
@@ -426,13 +480,7 @@ void loop(void)
   buttons[BUTTON_FRONT_INDEX] = digitalRead(BUTTON_FRONT_PIN);
   buttons[BUTTON_REAR_INDEX] = digitalRead(BUTTON_REAR_PIN);
 
- 
-  /*if (stepper >= 100) {
-    setServos();
-  }
-  */
-  
-  if (stepper >= 300) {
+  if (stepper >= 1500) {
     ble.println(getState());
     stepper = 0;
     
@@ -442,7 +490,7 @@ void loop(void)
     }
     
     if (buttons[BUTTON_REAR_INDEX] == HIGH) {
-      startPosition();
+      sleepPosition();
       ble.println("start pos");
     }
   }
@@ -469,9 +517,7 @@ void loop(void)
   {
 
     int c = ble.read();
-
     Serial.print((char)c);
-
     // Hex output too, helps w/debugging!
     Serial.print(" [0x");
     if (c <= 0xF) Serial.print(F("0"));
@@ -486,7 +532,7 @@ void loop(void)
     ble.println("leg reset");
   }
    else if (cmd.charAt(0) == 'x') {
-    startPosition();
+    sleepPosition();
     ble.println("start pos");
   }
   else if (cmd.charAt(0) == 's') {
@@ -513,8 +559,39 @@ void loop(void)
     ble.println(sweepResult);
   }
   else if (cmd.charAt(0) == 'l') {
-
     digitalWrite(13, !digitalRead(13));
   }
+  else if (cmd.charAt(0) == 'm') { 
+    int firstSeparatorIndex = cmd.indexOf(';');
+    int secondSeparatorIndex = cmd.indexOf(';', firstSeparatorIndex+1);
+    int leg = cmd.substring(1, firstSeparatorIndex).toInt();
+    int yaw = cmd.substring(firstSeparatorIndex+1, secondSeparatorIndex).toInt();
+    int pitch = cmd.substring(secondSeparatorIndex+1, cmd.indexOf('\n')).toInt();
+    String reply = "leg move:";
+    reply += leg;
+    reply += ";";
+    reply += yaw;
+    reply += ";";
+    reply += pitch;
+    ble.println(reply);
+    moveLeg(leg,yaw,pitch); //TODO: 
+  }
+    else if (cmd.charAt(0) == 'p') {
+    int firstSeparatorIndex = cmd.indexOf(';');
+    int secondSeparatorIndex = cmd.indexOf(';', firstSeparatorIndex+1);
+    int thirdSeparatorIndex = cmd.indexOf(';', secondSeparatorIndex+1);
+    int fourthSeparatorIndex = cmd.indexOf(';', thirdSeparatorIndex+1);
+    int l1 = cmd.substring(1, firstSeparatorIndex).toInt();
+    int l2 = cmd.substring(firstSeparatorIndex+1, secondSeparatorIndex).toInt();
+    int l3 = cmd.substring(secondSeparatorIndex+1, thirdSeparatorIndex).toInt();
+    int l4 = cmd.substring(thirdSeparatorIndex+1, cmd.indexOf('\n')).toInt();
 
+
+    setServo(LEG_FRONT_LEFT_PITCH, l1);
+    setServo(LEG_FRONT_RIGHT_PITCH,l2);    
+    setServo(LEG_BACK_RIGHT_PITCH, l3);
+    setServo(LEG_BACK_LEFT_PITCH, l4);
+    
+    String reply = "leg pitch move:";
+  }
 }
