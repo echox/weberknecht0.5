@@ -29,6 +29,8 @@
 
 
 
+
+
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
@@ -64,6 +66,20 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 #define SERVO_COUNT 9
 
+#define NOTE_C4  3830
+
+#define NOTE_D4  3400
+#define NOTE_E4  3038
+#define NOTE_F4  2864
+#define NOTE_G4  2550
+#define NOTE_A4  2272
+#define NOTE_B4  2028
+#define NOTE_C5  1912
+
+#define QUARTER 4
+#define HALF 8
+#define WHOLE 16
+
 
 // our servo # counter
 uint8_t servonum = 0;
@@ -92,7 +108,6 @@ int buttons[] = {
   LOW,
   LOW
 };
-
 
 // --- abstandsmesser
 #include <NewPing.h>
@@ -344,9 +359,34 @@ String sweep(int count) {
   return result;
 }
 
+
+void playTone(int pin, int tone_, long duration) {
+  long elapsed_time = 0;
+  int rest_count = 100;
+  long durationMicro = duration * 10000;
+  if (tone_ > 0) { // if this isn't a Rest beat, while the tone has 
+    //  played less long than 'duration', pulse speaker HIGH and LOW
+    while (elapsed_time < durationMicro) {
+
+      digitalWrite(pin,HIGH);
+      delayMicroseconds(tone_ / 2);
+
+      // DOWN
+      digitalWrite(pin, LOW);
+      delayMicroseconds(tone_ / 2);
+
+      // Keep track of how long we pulsed
+      elapsed_time += (tone_);
+    } 
+  }
+  else { // Rest beat; loop times delay
+    for (int j = 0; j < rest_count; j++) { // See NOTE on rest_count
+      delayMicroseconds(durationMicro);  
+    }                                
+  }                                 
+}
+
 int stepper = 0;
-
-
 void setup(void)
 {
 
@@ -552,7 +592,7 @@ void loop(void)
     tone(1, 440, 250);
     delay(10);
     tone(1, 540, 250);
-
+   
   } else if (cmd.charAt(0) == '?') {
     int steps = cmd.substring(1, cmd.indexOf('\n')).toInt();
     String sweepResult = sweep(steps);
@@ -593,5 +633,62 @@ void loop(void)
     setServo(LEG_BACK_LEFT_PITCH, l4);
     
     String reply = "leg pitch move:";
+  }
+
+  else if (cmd.charAt(0) == 'z') {
+
+    ble.println("singing!");
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_C4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, HALF);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, HALF);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_G4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_G4, HALF);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_C4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_E4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_D4, QUARTER);
+    delay(100);
+    playTone(1, NOTE_C4, WHOLE);
+    delay(100);
   }
 }
